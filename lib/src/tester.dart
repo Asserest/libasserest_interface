@@ -54,7 +54,8 @@ abstract class AsserestTestPlatform<T extends AsserestProperty>
   final T property;
   final bool _counter;
 
-  AsserestTestPlatform(this.property, {bool counter = false}) : _counter = counter;
+  AsserestTestPlatform(this.property, {bool counter = false})
+      : _counter = counter;
 
   @protected
   Future<AsserestResult> runTestProcess();
@@ -63,16 +64,59 @@ abstract class AsserestTestPlatform<T extends AsserestProperty>
   @mustCallSuper
   FutureOr<AsserestReport> run() async {
     late AsserestResult result;
-    final Stopwatch c = Stopwatch()..start();
+    final Stopwatch c = Stopwatch();
+    if (_counter) {
+      c.start();
+    }
 
     try {
       result = await runTestProcess();
     } catch (_) {
       result = AsserestResult.error;
     } finally {
-      c.stop();
+      if (c.isRunning) {
+        c.stop();
+      }
     }
 
-    return _AsserestReport(property.generateUri(), property.isResolved, result, c.elapsed);
+    return _AsserestReport(
+        property.url, property.isResolved, result, _counter ? c.elapsed : null);
   }
+}
+
+typedef AsserestTestPlatformBuilder = AsserestTestPlatform Function(
+    AsserestProperty property);
+
+@sealed
+class AsserestTestAssigner {
+  static AsserestTestAssigner? _instance;
+
+  final Map<Type, AsserestTestPlatformBuilder> _platformBuilders = {};
+
+  AsserestTestAssigner._();
+
+  factory AsserestTestAssigner() {
+    if (_instance == null) {
+      _instance = AsserestTestAssigner._();
+    }
+
+    return _instance!;
+  }
+
+  void assign(Type propertyType, AsserestTestPlatformBuilder platformBuilder,
+      {bool replaceIfAssigned = false}) {
+    if (!replaceIfAssigned) {
+      _platformBuilders.putIfAbsent(propertyType, () => platformBuilder);
+    } else {
+      _platformBuilders[propertyType] = platformBuilder;
+    }
+  }
+
+  AsserestTestPlatform buildTestPlatform(AsserestProperty property) =>
+      _platformBuilders[property.runtimeType]!(property);
+}
+
+@sealed
+class AsserestParallelTestPlatform {
+  
 }
