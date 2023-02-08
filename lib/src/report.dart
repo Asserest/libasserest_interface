@@ -4,6 +4,7 @@ enum AsserestResult {
   success, failure, error
 }
 
+@sealed
 @immutable
 abstract class AsserestReport {
   const AsserestReport._();

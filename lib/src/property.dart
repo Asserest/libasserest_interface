@@ -1,7 +1,6 @@
 import 'dart:collection';
 
 import 'package:meta/meta.dart';
-import 'package:quiver/core.dart' as quiver;
 
 import 'exceptions.dart';
 
@@ -70,29 +69,18 @@ abstract class PropertyParseProcessor<T extends AsserestProperty> {
             (element) => !{"url", "timeout", "accessible", "try_count"}
                 .contains(element)))));
   }
-
-  @override
-  int get hashCode => quiver.hash2(runtimeType, schemeRegex);
-
-  bool operator ==(Object other) =>
-      other is PropertyParseProcessor && hashCode == other.hashCode;
 }
 
 @sealed
 class AsserestPropertyParser {
-  static AsserestPropertyParser? _instance;
+  static final AsserestPropertyParser _instance = AsserestPropertyParser._();
   final Set<PropertyParseProcessor> _parseProcessors = HashSet(
       equals: (p0, p1) => p0.schemeRegex == p1.schemeRegex,
       hashCode: (processor) => processor.schemeRegex.hashCode);
 
   AsserestPropertyParser._();
 
-  factory AsserestPropertyParser() {
-    if (_instance == null) {
-      _instance = AsserestPropertyParser._();
-    }
-    return _instance!;
-  }
+  factory AsserestPropertyParser() => _instance;
 
   bool isDefined(String scheme) => _parseProcessors
       .any((element) => RegExp(element.schemeRegex).hasMatch(scheme));

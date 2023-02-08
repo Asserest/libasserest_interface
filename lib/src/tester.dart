@@ -16,7 +16,6 @@ extension on AsserestResult {
   }
 }
 
-@immutable
 class _AsserestReport implements AsserestReport {
   @override
   final Uri url;
@@ -47,6 +46,8 @@ class _AsserestReport implements AsserestReport {
 
     return buf.toString();
   }
+
+
 }
 
 abstract class AsserestTestPlatform<T extends AsserestProperty>
@@ -89,19 +90,13 @@ typedef AsserestTestPlatformBuilder = AsserestTestPlatform Function(
 
 @sealed
 class AsserestTestAssigner {
-  static AsserestTestAssigner? _instance;
+  static final AsserestTestAssigner _instance = AsserestTestAssigner._();
 
   final Map<Type, AsserestTestPlatformBuilder> _platformBuilders = {};
 
   AsserestTestAssigner._();
 
-  factory AsserestTestAssigner() {
-    if (_instance == null) {
-      _instance = AsserestTestAssigner._();
-    }
-
-    return _instance!;
-  }
+  factory AsserestTestAssigner() => _instance;
 
   void assign(Type propertyType, AsserestTestPlatformBuilder platformBuilder,
       {bool replaceIfAssigned = false}) {
