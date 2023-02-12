@@ -46,8 +46,6 @@ class _AsserestReport implements AsserestReport {
 
     return buf.toString();
   }
-
-
 }
 
 abstract class AsserestTestPlatform<T extends AsserestProperty>
@@ -107,11 +105,9 @@ class AsserestTestAssigner {
     }
   }
 
+  bool isAssigned(Type propertyType) =>
+      _platformBuilders.containsKey(propertyType);
+
   AsserestTestPlatform buildTestPlatform(AsserestProperty property) =>
       _platformBuilders[property.runtimeType]!(property);
-}
-
-@sealed
-class AsserestParallelTestPlatform {
-  
 }
