@@ -69,10 +69,10 @@ abstract class PropertyParseProcessor<T extends AsserestProperty> {
   /// construct as constant form.
   const PropertyParseProcessor();
 
-  /// A pattern of [RegExp] uses for matching URL scheme which disable case
-  /// sensitive and dot all with unicode supported.
+  /// A [Set] of [String] that contains all supported URL schemes for this
+  /// processor.
   @protected
-  String get schemeRegex;
+  Set<String> get supportedSchemes;
 
   /// Define the construction of [AsserestProperty] with given [url], [timeout],
   /// [accessible] and [tryCount] with [additionalProperty] for those
@@ -94,8 +94,8 @@ abstract class PropertyParseProcessor<T extends AsserestProperty> {
     final bool accessible = propertyMap["accessible"];
     final int? tryCount = propertyMap["try_count"];
 
-    if (!RegExp(schemeRegex, caseSensitive: false, dotAll: false, unicode: true)
-        .hasMatch(url.scheme)) {
+    if (!supportedSchemes
+        .any((element) => element.toLowerCase() == url.scheme)) {
       throw StateError(
           "URL scheme '${url.scheme}' is not handled by this processor.");
     } else if ((tryCount == null) ^ accessible) {
@@ -120,11 +120,7 @@ class AsserestPropertyParser {
   /// Instance of this parser.
   static final AsserestPropertyParser _instance = AsserestPropertyParser._();
 
-  /// A [Set] of [PropertyParseProcessor] which using [PropertyParseProcessor.schemeRegex]'s
-  /// hashcode to identify.
-  final Set<PropertyParseProcessor> _parseProcessors = HashSet(
-      equals: (p0, p1) => p0.schemeRegex == p1.schemeRegex,
-      hashCode: (processor) => processor.schemeRegex.hashCode);
+  final Map<String, PropertyParseProcessor> _parseProcessors = HashMap();
 
   AsserestPropertyParser._();
 
@@ -132,40 +128,104 @@ class AsserestPropertyParser {
   factory AsserestPropertyParser() => _instance;
 
   /// Determine the given [scheme] is defined already.
-  bool isDefined(String scheme) => _parseProcessors
-      .any((element) => RegExp(element.schemeRegex).hasMatch(scheme));
+  bool isDefined(String scheme) => _parseProcessors.containsKey(scheme);
 
   /// Define a new [PropertyParseProcessor].
-  /// 
+  ///
   /// It uses [PropertyParseProcessor.schemeRegex] to determine the corresponsed
   /// scheme is handled by single parser in ideal case or replace to the new
-  /// [processor] if [replaceIfDefined] enabled
-  /// 
-  /// It's expected there is no duplicated pattern for identifying the same schemes
-  /// wihch it uses the first processor in [HashSet].
+  /// [processor] if [replaceIfDefined] enabled.
   void define(PropertyParseProcessor processor,
       {bool replaceIfDefined = false}) {
-    if (_parseProcessors.contains(processor) && replaceIfDefined) {
-      _parseProcessors.remove(processor);
+    for (String scheme in processor.supportedSchemes) {
+      if (!isDefined(scheme) || replaceIfDefined) {
+        _parseProcessors[scheme] = processor;
+      }
     }
-
-    _parseProcessors.add(processor);
   }
 
+  /// Remove defined processor(s) with given [scheme].
+  /// 
+  /// [scheme] can be either [Set] of [String] or just a [String].
+  void removeDefined(Object scheme) {
+    if (scheme is Set) {
+      scheme.forEach(_parseProcessors.remove);
+    } else if (scheme is String) {
+      _parseProcessors.remove(scheme);
+    } else {
+      throw ArgumentError.value(scheme, "scheme", "The scheme should be either Set or String");
+    }
+  }
+
+  /// Reset all mapped processors.
   void reset() {
     _parseProcessors.clear();
   }
 
+  /// Parse [propertyMap] to corresponsed [AsserestProperty].
+  /// 
+  /// If there is no `url` contains in [propertyMap], it throws
+  /// [InvalidPropertyMapException]. When the given `url` is not
+  /// URL string, [FormatException] will be thrown.
+  /// 
+  /// If the given URL does not defined yet, it throws
+  /// [UndefinedSchemeParserException].
   AsserestProperty parse(Map<String, dynamic> propertyMap) {
-    return _parseProcessors
-        .where((element) => RegExp(element.schemeRegex,
-                caseSensitive: false, dotAll: false, unicode: true)
-            .hasMatch(propertyMap["url"]))
-        .first
-        .parse(propertyMap);
+    late String scheme;
+
+    try {
+      scheme = Uri.parse(propertyMap["url"]).scheme;
+    } on TypeError {
+      throw InvalidPropertyMapException._(propertyMap);
+    }
+
+    try {
+      return _parseProcessors[scheme]!.parse(propertyMap);
+    } on TypeError {
+      throw UndefinedSchemeParserException._(scheme);
+    }
   }
 
-  List<AsserestProperty> parseList(List<Map<String, dynamic>> propertyMaps) =>
-      List.generate(propertyMaps.length, (index) => parse(propertyMaps[index]),
-          growable: false);
+  /// [parse] multiple [propertyMaps] into a single [List]. 
+  List<AsserestProperty> parseList(List<Map<String, dynamic>> propertyMaps,
+      {void onError(Object? thrown)?}) {
+    List<AsserestProperty> property = [];
+
+    for (Map<String, dynamic> pmap in propertyMaps) {
+      try {
+        property.add(parse(pmap));
+      } catch (err) {
+        if (onError != null) {
+          onError(err);
+        } else {
+          rethrow;
+        }
+      }
+    }
+
+    return UnmodifiableListView(property);
+  }
+}
+
+/// An [Exception] when given property [Map] does not stastified
+/// the standard.
+@sealed
+class InvalidPropertyMapException extends AsserestException {
+  final Map<String, dynamic> _propertyMap;
+
+  InvalidPropertyMapException._(this._propertyMap);
+
+  @override
+  String get message =>
+      "The given property map does not stastified Asserest standard";
+
+  @override
+  String toString() {
+    StringBuffer buf = StringBuffer("InvalidPropertyMapException: ")
+      ..write(message)
+      ..writeln("Applied property: ")
+      ..write(_propertyMap);
+
+    return buf.toString();
+  }
 }

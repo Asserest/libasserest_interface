@@ -9,6 +9,7 @@ import 'property.dart';
 import 'report.dart';
 
 extension on AsserestResult {
+  /// Get readable [name] by captalize first character of [String]
   String get _readableName {
     String ogName = this.name;
 
@@ -16,6 +17,7 @@ extension on AsserestResult {
   }
 }
 
+/// Implemented [AsserestReport] object.
 class _AsserestReport implements AsserestReport {
   @override
   final Uri url;
@@ -61,7 +63,7 @@ abstract class AsserestTestPlatform<T extends AsserestProperty>
 
   @override
   @mustCallSuper
-  FutureOr<AsserestReport> run() async {
+  Future<AsserestReport> run() async {
     late AsserestResult result;
     final Stopwatch c = Stopwatch();
     if (_counter) {
@@ -129,8 +131,8 @@ class _AsserestParallelTestPlatformStreamSubscription
 
   @override
   Future<void> cancel() async {
-    await _executor.close();
     await _base.cancel();
+    await _executor.close();
   }
 
   @override
@@ -172,6 +174,8 @@ class _AsserestParallelTestPlatformStreamSubscription
   }
 }
 
+/// A [Set] which allows [AsyncTask] to identify all provided [AsserestTestPlatform]
+/// subclasses.
 class _AsserestParallelTestTypeSet extends SetBase<AsserestTestPlatform> {
   final HashMap<Type, AsserestTestPlatform> _typeMap = HashMap();
 
@@ -220,6 +224,7 @@ typedef void AsyncExecutorLogger(String type, dynamic message,
 
 @sealed
 class AsserestParallelTestPlatform extends IterableBase<AsserestTestPlatform> {
+  /// A [Map] with [AsserestProperty.hashCode] as reference.
   final Map<int, AsserestTestPlatform> _platforms = {};
   final _AsserestParallelTestTypeSet _typeSet = _AsserestParallelTestTypeSet();
 
@@ -237,6 +242,7 @@ class AsserestParallelTestPlatform extends IterableBase<AsserestTestPlatform> {
     AsserestTestPlatform platform =
         AsserestTestAssigner()._buildTestPlatform(property);
     _platforms[property.hashCode] = platform;
+    _typeSet.add(platform);
   }
 
   void appplyAll(Iterable<AsserestProperty> properites) {

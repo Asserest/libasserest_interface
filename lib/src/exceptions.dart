@@ -1,5 +1,3 @@
-import 'report.dart' show AsserestResult;
-
 /// A generic interface for indicating Asserest related
 /// [Error] and [Exception].
 abstract class AsserestThrowable {
