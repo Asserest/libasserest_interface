@@ -119,12 +119,12 @@ class AsserestTestAssigner {
   factory AsserestTestAssigner() => _instance;
 
   /// Bind [platformBuilder] with corresponsed [propertyType].
-  /// 
+  ///
   /// ### Warning
-  /// 
+  ///
   /// There is no type guard system for verifying [propertyType] and parameter
   /// of [platformBuilder]. Thus, it cannot be undone after [assign] is called.
-  /// 
+  ///
   /// If the incorrect [propertyType] assigned, the only solution is [reset]
   /// and repeat [assign] process.
   void assign(Type propertyType, AsserestTestPlatformBuilder platformBuilder,
@@ -134,25 +134,39 @@ class AsserestTestAssigner {
     }
   }
 
+  /// Flush all [assign]ed [AsserestTestPlatformBuilder].
   void reset() {
     _platformBuilders.clear();
   }
 
+  /// Check the given [AsserestProperty]'s subclass [Type] is assigned the
+  /// builder already.
   bool isAssigned(Type propertyType) =>
       _platformBuilders.containsKey(propertyType);
 
-  AsserestTestPlatform _buildTestPlatform(AsserestProperty property) =>
+  /// Generate [AsserestTestPlatform] from given property.
+  /// 
+  /// If the given [property] type does not assigned the corresponsed
+  /// [AsserestTestPlatformBuilder], [TypeError] will be thrown.
+  AsserestTestPlatform buildTestPlatform(AsserestProperty property) =>
       _platformBuilders[property.runtimeType]!(property);
 }
 
+/// [StreamSubscription] wrapper for managing interaction between [AsyncExecutor]
+/// and two event in [StreamSubscription]: [onDone] and [onError].
 class _AsserestParallelTestPlatformStreamSubscription
     implements StreamSubscription<AsserestReport> {
   final StreamSubscription<AsserestReport> _base;
   final AsyncExecutor _executor;
 
-  _AsserestParallelTestPlatformStreamSubscription(this._base, this._executor) {
-    this.onDone(null);
-    this.onError(null);
+  /// Wrap the given [_base], [_executor].
+  /// 
+  /// If customized [onData] or [onError] event required, please
+  /// apply on this instead of [Stream.listen] directly.
+  _AsserestParallelTestPlatformStreamSubscription(this._base, this._executor,
+      {void Function()? onDone, Function? onError}) {
+    this.onDone(onDone);
+    this.onError(onError);
   }
 
   @override
@@ -178,7 +192,9 @@ class _AsserestParallelTestPlatformStreamSubscription
   void onDone(void Function()? handleDone) {
     _base.onDone(() async {
       await _executor.close();
-      (handleDone ?? () {})();
+      if (handleDone != null) {
+        handleDone();
+      }
     });
   }
 
@@ -250,17 +266,21 @@ class _AsserestParallelTestTypeSet extends SetBase<AsserestTestPlatform> {
   }
 }
 
+/// Alias [Function] for defining logger in [AsyncExecutor].
 typedef void AsyncExecutorLogger(String type, dynamic message,
     [dynamic error, dynamic stackTrace]);
 
+/// 
 @sealed
 class AsserestParallelTestPlatform extends IterableBase<AsserestTestPlatform> {
   /// A [Map] with [AsserestProperty.hashCode] as reference.
   final Map<int, AsserestTestPlatform> _platforms = {};
   final _AsserestParallelTestTypeSet _typeSet = _AsserestParallelTestTypeSet();
 
+  /// Define maximum [threads] for running [AsserestTestPlatform] in parallel.
   final int threads;
 
+  /// Construct a parallel test platform with specified [threads].
   AsserestParallelTestPlatform({this.threads = 1});
 
   @override
@@ -269,17 +289,21 @@ class AsserestParallelTestPlatform extends IterableBase<AsserestTestPlatform> {
 
   int get length => _platforms.length;
 
+  /// Apply [property] which going to assert.
   void apply(AsserestProperty property) {
     AsserestTestPlatform platform =
-        AsserestTestAssigner()._buildTestPlatform(property);
+        AsserestTestAssigner().buildTestPlatform(property);
     _platforms[property.hashCode] = platform;
     _typeSet.add(platform);
   }
 
+  /// Perform multiple [apply] with given [properties].
   void appplyAll(Iterable<AsserestProperty> properites) {
     properites.forEach(apply);
   }
 
+  /// Execute all applied [AsserestProperty] into [AsyncTask] and return
+  /// [StreamSubscription] for monitoring update.
   StreamSubscription<AsserestReport> runAll(
       {String? name,
       AsyncExecutorLogger? logger,
@@ -297,8 +321,7 @@ class AsserestParallelTestPlatform extends IterableBase<AsserestTestPlatform> {
     Stream<AsserestReport> reportStream =
         Stream.fromFutures(executor.executeAll(_platforms.values));
     return _AsserestParallelTestPlatformStreamSubscription(
-        reportStream.listen(onData,
-            onDone: onDone, onError: onError, cancelOnError: cancelOnError),
-        executor);
+        reportStream.listen(onData, cancelOnError: cancelOnError), executor,
+        onDone: onDone, onError: onError);
   }
 }
