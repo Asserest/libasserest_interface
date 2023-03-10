@@ -86,12 +86,24 @@ abstract class PropertyParseProcessor<T extends AsserestProperty> {
   /// This method **is not** designed for inhertance since it defines all
   /// standardized properties in [Map] and convert to all builtin Dart object
   /// to [createProperty].
+  /// 
+  /// If the property is incompleted, [InvalidPropertyMapException] will be thrown.
+  /// 
+  /// If the parser does not support url scheme, [StateError] will be thrown.
   @protected
   @mustCallSuper
   T parse(Map<String, dynamic> propertyMap) {
-    final Uri url = Uri.parse(propertyMap["url"]);
+    late final Uri url;
+    late final bool accessible;
+
+    try {
+      url = Uri.parse(propertyMap["url"]);
+      accessible = propertyMap["accessible"];
+    } on TypeError {
+      throw InvalidPropertyMapException._(propertyMap);
+    }
+
     final Duration timeout = Duration(seconds: propertyMap["timeout"] ?? 10);
-    final bool accessible = propertyMap["accessible"];
     final int? tryCount = propertyMap["try_count"];
 
     if (!supportedSchemes
@@ -99,8 +111,7 @@ abstract class PropertyParseProcessor<T extends AsserestProperty> {
       throw StateError(
           "URL scheme '${url.scheme}' is not handled by this processor.");
     } else if ((tryCount == null) ^ accessible) {
-      throw ArgumentError.value(tryCount, "try_count",
-          "Try count is required only if the URL is accessible.");
+      throw InvalidPropertyMapException._(propertyMap);
     }
 
     return createProperty(
@@ -112,6 +123,12 @@ abstract class PropertyParseProcessor<T extends AsserestProperty> {
             (element) => !{"url", "timeout", "accessible", "try_count"}
                 .contains(element)))));
   }
+}
+
+extension on PropertyParseProcessor {
+  /// Convert all [supportedSchemes] to lower case.
+  Set<String> get _allLowerSchemes =>
+      supportedSchemes.map((e) => e.toLowerCase()).toSet();
 }
 
 /// A parser for parsing [Map] data to [AsserestProperty].
@@ -132,12 +149,12 @@ class AsserestPropertyParser {
 
   /// Define a new [PropertyParseProcessor].
   ///
-  /// It uses [PropertyParseProcessor.schemeRegex] to determine the corresponsed
+  /// It uses [PropertyParseProcessor.supportedSchemes] to determine the corresponsed
   /// scheme is handled by single parser in ideal case or replace to the new
   /// [processor] if [replaceIfDefined] enabled.
   void define(PropertyParseProcessor processor,
       {bool replaceIfDefined = false}) {
-    for (String scheme in processor.supportedSchemes) {
+    for (String scheme in processor._allLowerSchemes) {
       if (!isDefined(scheme) || replaceIfDefined) {
         _parseProcessors[scheme] = processor;
       }
@@ -145,7 +162,7 @@ class AsserestPropertyParser {
   }
 
   /// Remove defined processor(s) with given [scheme].
-  /// 
+  ///
   /// [scheme] can be either [Set] of [String] or just a [String].
   void removeDefined(Object scheme) {
     if (scheme is Set) {
@@ -153,7 +170,8 @@ class AsserestPropertyParser {
     } else if (scheme is String) {
       _parseProcessors.remove(scheme);
     } else {
-      throw ArgumentError.value(scheme, "scheme", "The scheme should be either Set or String");
+      throw ArgumentError.value(
+          scheme, "scheme", "The scheme should be either Set or String");
     }
   }
 
@@ -163,11 +181,11 @@ class AsserestPropertyParser {
   }
 
   /// Parse [propertyMap] to corresponsed [AsserestProperty].
-  /// 
+  ///
   /// If there is no `url` contains in [propertyMap], it throws
   /// [InvalidPropertyMapException]. When the given `url` is not
   /// URL string, [FormatException] will be thrown.
-  /// 
+  ///
   /// If the given URL does not defined yet, it throws
   /// [UndefinedSchemeParserException].
   AsserestProperty parse(Map<String, dynamic> propertyMap) {
@@ -186,21 +204,12 @@ class AsserestPropertyParser {
     }
   }
 
-  /// [parse] multiple [propertyMaps] into a single [List]. 
-  List<AsserestProperty> parseList(List<Map<String, dynamic>> propertyMaps,
-      {void onError(Object? thrown)?}) {
+  /// [parse] multiple [propertyMaps] into a single [List].
+  List<AsserestProperty> parseList(List<Map<String, dynamic>> propertyMaps) {
     List<AsserestProperty> property = [];
 
     for (Map<String, dynamic> pmap in propertyMaps) {
-      try {
-        property.add(parse(pmap));
-      } catch (err) {
-        if (onError != null) {
-          onError(err);
-        } else {
-          rethrow;
-        }
-      }
+      property.add(parse(pmap));
     }
 
     return UnmodifiableListView(property);
