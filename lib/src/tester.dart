@@ -1,8 +1,8 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 
 import 'package:async_task/async_task.dart';
-import 'package:async_task/async_task_extension.dart';
 import 'package:meta/meta.dart';
 
 import 'property.dart';
@@ -50,17 +50,34 @@ class _AsserestReport implements AsserestReport {
   }
 }
 
+/// A platform for executing assertion from given [AsserestProperty]'s subclass [T].
+///
+/// This is [AsyncTask] based class with integrated stopwatch system for marking
+/// execution duration.
 abstract class AsserestTestPlatform<T extends AsserestProperty>
     extends AsyncTask<T, AsserestReport> {
+  /// [AsserestProperty] for running this test.
   final T property;
   final bool _counter;
 
+  /// Create new test platform for asserting [property].
+  ///
+  /// If [counter] enabled, [AsserestReport.executeDuration] will be provided
+  /// when assertion finished.
   AsserestTestPlatform(this.property, {bool counter = false})
       : _counter = counter;
 
+  /// The process for asserting and return [AsserestResult] to determine
+  /// accessibility of [AsserestProperty.url].
   @protected
   Future<AsserestResult> runTestProcess();
 
+  /// The entire assertion task will be processed once [run] has been
+  /// invoked.
+  ///
+  /// This method **MUST NOT** be overridden and intent for callback only.
+  /// For implementing assertion processor, please override [runTestProcess]
+  /// instead.
   @override
   @mustCallSuper
   Future<AsserestReport> run() async {
@@ -81,13 +98,15 @@ abstract class AsserestTestPlatform<T extends AsserestProperty>
     }
 
     return _AsserestReport(
-        property.url, property.isResolved, result, _counter ? c.elapsed : null);
+        property.url, property.accessible, result, _counter ? c.elapsed : null);
   }
 }
 
+/// Alias definition of constructing [AsserestTestPlatform] from given [property].
 typedef AsserestTestPlatformBuilder = AsserestTestPlatform Function(
     AsserestProperty property);
 
+/// A handler for assigning [AsserestTestPlatform] from [AsserestProperty].
 @sealed
 class AsserestTestAssigner {
   static final AsserestTestAssigner _instance = AsserestTestAssigner._();
@@ -96,15 +115,27 @@ class AsserestTestAssigner {
 
   AsserestTestAssigner._();
 
+  /// Return current instance of [AsserestTestAssigner].
   factory AsserestTestAssigner() => _instance;
 
+  /// Bind [platformBuilder] with corresponsed [propertyType].
+  /// 
+  /// ### Warning
+  /// 
+  /// There is no type guard system for verifying [propertyType] and parameter
+  /// of [platformBuilder]. Thus, it cannot be undone after [assign] is called.
+  /// 
+  /// If the incorrect [propertyType] assigned, the only solution is [reset]
+  /// and repeat [assign] process.
   void assign(Type propertyType, AsserestTestPlatformBuilder platformBuilder,
       {bool replaceIfAssigned = false}) {
-    if (!replaceIfAssigned) {
-      _platformBuilders.putIfAbsent(propertyType, () => platformBuilder);
-    } else {
+    if (replaceIfAssigned || !isAssigned(propertyType)) {
       _platformBuilders[propertyType] = platformBuilder;
     }
+  }
+
+  void reset() {
+    _platformBuilders.clear();
   }
 
   bool isAssigned(Type propertyType) =>
