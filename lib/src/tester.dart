@@ -208,7 +208,7 @@ class AsserestParallelTestPlatform extends IterableBase<AsserestTestPlatform> {
   final Map<int, AsserestTestPlatform> _platforms = {};
   final _AsserestParallelTestTypeSet _typeSet = _AsserestParallelTestTypeSet();
 
-  /// Construct a parallel test platform with specified [threads].
+  /// Construct a parallel test platform.
   AsserestParallelTestPlatform();
 
   @override
@@ -226,7 +226,7 @@ class AsserestParallelTestPlatform extends IterableBase<AsserestTestPlatform> {
   }
 
   /// Perform multiple [apply] with given [properties].
-  void appplyAll(Iterable<AsserestProperty> properites) {
+  void applyAll(Iterable<AsserestProperty> properites) {
     properites.forEach(apply);
   }
 
@@ -246,13 +246,13 @@ abstract class AsserestParallelExecutor {
   bool get isInvoked;
 
   /// Invoke [AsyncExecutor.executeAll] to run all [AsserestTestPlatform] at once.
-  /// 
+  ///
   /// This method suppose should be call once only, when [isInvoked] is `true`,
   /// call it again will throw [StateError].
   Stream<AsserestReport> invoke();
 
   /// Terminate the process of [AsyncExecutor].
-  /// 
+  ///
   /// The most ideal way to invoke [shutdown] method is wrapping it into
   /// [StreamSubscription.onDone] or [StreamSubscription.onError].
   Future<bool> shutdown();
@@ -298,4 +298,18 @@ class _AsserestParallelExecutor implements AsserestParallelExecutor {
 
   @override
   Future<bool> shutdown() => _executor.close();
+}
+
+/// A [List] extension for [AsserestProperty] that building an [AsserestParallelExecutor]
+/// directly. 
+extension DirectParseParallelExecutor<AP extends AsserestProperty> on List<AP> {
+  /// Assign entire items in this [List] to [AsserestParallelExecutor] with bypassing
+  /// [AsserestParallelTestPlatform.applyAll].
+  AsserestParallelExecutor assignAndBuildExecutor(
+      {String? name, int threads = 1, AsyncTaskLogger? logger}) {
+    AsserestParallelTestPlatform platform = AsserestParallelTestPlatform()
+      ..applyAll(this);
+
+    return platform.buildExecutor(name: name, threads: threads, logger: logger);
+  }
 }
