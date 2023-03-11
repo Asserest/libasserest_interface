@@ -1,1 +1,3 @@
-# Standard interface of Asserest execution.
+# Standard interface of Asserest execution
+
+Giving the minimal abstract object for constructing Asserest assertion handlers.
