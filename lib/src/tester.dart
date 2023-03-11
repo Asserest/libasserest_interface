@@ -145,80 +145,11 @@ class AsserestTestAssigner {
       _platformBuilders.containsKey(propertyType);
 
   /// Generate [AsserestTestPlatform] from given property.
-  /// 
+  ///
   /// If the given [property] type does not assigned the corresponsed
   /// [AsserestTestPlatformBuilder], [TypeError] will be thrown.
   AsserestTestPlatform buildTestPlatform(AsserestProperty property) =>
       _platformBuilders[property.runtimeType]!(property);
-}
-
-/// [StreamSubscription] wrapper for managing interaction between [AsyncExecutor]
-/// and two event in [StreamSubscription]: [onDone] and [onError].
-class _AsserestParallelTestPlatformStreamSubscription
-    implements StreamSubscription<AsserestReport> {
-  final StreamSubscription<AsserestReport> _base;
-  final AsyncExecutor _executor;
-
-  /// Wrap the given [_base], [_executor].
-  /// 
-  /// If customized [onData] or [onError] event required, please
-  /// apply on this instead of [Stream.listen] directly.
-  _AsserestParallelTestPlatformStreamSubscription(this._base, this._executor,
-      {void Function()? onDone, Function? onError}) {
-    this.onDone(onDone);
-    this.onError(onError);
-  }
-
-  @override
-  Future<E> asFuture<E>([E? futureValue]) {
-    return _base.asFuture<E>(futureValue);
-  }
-
-  @override
-  Future<void> cancel() async {
-    await _base.cancel();
-    await _executor.close();
-  }
-
-  @override
-  bool get isPaused => _base.isPaused;
-
-  @override
-  void onData(void Function(AsserestReport data)? handleData) {
-    _base.onData(handleData);
-  }
-
-  @override
-  void onDone(void Function()? handleDone) {
-    _base.onDone(() async {
-      await _executor.close();
-      if (handleDone != null) {
-        handleDone();
-      }
-    });
-  }
-
-  @override
-  void onError(Function? handleError) {
-    _base.onError((err, stackTrace) async {
-      await _executor.close();
-      if (handleError != null) {
-        handleError(err, stackTrace);
-      } else {
-        throw err;
-      }
-    });
-  }
-
-  @override
-  void pause([Future<void>? resumeSignal]) {
-    _base.pause(resumeSignal);
-  }
-
-  @override
-  void resume() {
-    _base.resume();
-  }
 }
 
 /// A [Set] which allows [AsyncTask] to identify all provided [AsserestTestPlatform]
@@ -270,18 +201,15 @@ class _AsserestParallelTestTypeSet extends SetBase<AsserestTestPlatform> {
 typedef void AsyncExecutorLogger(String type, dynamic message,
     [dynamic error, dynamic stackTrace]);
 
-/// 
+/// A platform for handling multiple [AsserestTestPlatform] to execute at once.
 @sealed
 class AsserestParallelTestPlatform extends IterableBase<AsserestTestPlatform> {
   /// A [Map] with [AsserestProperty.hashCode] as reference.
   final Map<int, AsserestTestPlatform> _platforms = {};
   final _AsserestParallelTestTypeSet _typeSet = _AsserestParallelTestTypeSet();
 
-  /// Define maximum [threads] for running [AsserestTestPlatform] in parallel.
-  final int threads;
-
   /// Construct a parallel test platform with specified [threads].
-  AsserestParallelTestPlatform({this.threads = 1});
+  AsserestParallelTestPlatform();
 
   @override
   Iterator<AsserestTestPlatform<AsserestProperty>> get iterator =>
@@ -302,26 +230,72 @@ class AsserestParallelTestPlatform extends IterableBase<AsserestTestPlatform> {
     properites.forEach(apply);
   }
 
-  /// Execute all applied [AsserestProperty] into [AsyncTask] and return
-  /// [StreamSubscription] for monitoring update.
-  StreamSubscription<AsserestReport> runAll(
-      {String? name,
-      AsyncExecutorLogger? logger,
-      void Function(AsserestReport data)? onData,
-      void Function()? onDone,
-      Function? onError,
-      bool? cancelOnError}) {
-    final AsyncExecutor executor = AsyncExecutor(
-        name: name ?? "Asserest parallel test - ${DateTime.now()}",
-        logger: logger,
-        sequential: false,
-        parallelism: threads,
-        taskTypeRegister: _typeSet.toList);
+  /// Wrap all applied [AsserestProperty] into an executor for performing asserion.
+  AsserestParallelExecutor buildExecutor(
+          {String? name, int threads = 1, AsyncTaskLogger? logger}) =>
+      _AsserestParallelExecutor(_platforms.values.toList(), _typeSet, threads,
+          name ?? "AsserestParallelExecutor - ${DateTime.now()}", logger);
+}
 
-    Stream<AsserestReport> reportStream =
-        Stream.fromFutures(executor.executeAll(_platforms.values));
-    return _AsserestParallelTestPlatformStreamSubscription(
-        reportStream.listen(onData, cancelOnError: cancelOnError), executor,
-        onDone: onDone, onError: onError);
+/// An executor for handle assertion on [AsserestProperty].
+@sealed
+abstract class AsserestParallelExecutor {
+  const AsserestParallelExecutor._();
+
+  /// Determine does [invoke] called already.
+  bool get isInvoked;
+
+  /// Invoke [AsyncExecutor.executeAll] to run all [AsserestTestPlatform] at once.
+  /// 
+  /// This method suppose should be call once only, when [isInvoked] is `true`,
+  /// call it again will throw [StateError].
+  Stream<AsserestReport> invoke();
+
+  /// Terminate the process of [AsyncExecutor].
+  /// 
+  /// The most ideal way to invoke [shutdown] method is wrapping it into
+  /// [StreamSubscription.onDone] or [StreamSubscription.onError].
+  Future<bool> shutdown();
+}
+
+class _AsserestParallelExecutor implements AsserestParallelExecutor {
+  final AsyncExecutor _executor;
+  final UnmodifiableListView<AsserestTestPlatform> _platforms;
+  bool _invoked;
+
+  _AsserestParallelExecutor._build(this._executor, this._platforms)
+      : _invoked = false;
+
+  factory _AsserestParallelExecutor(
+          List<AsserestTestPlatform> platforms,
+          Set<AsserestTestPlatform> typeSet,
+          int threads,
+          String name,
+          AsyncExecutorLogger? logger) =>
+      _AsserestParallelExecutor._build(
+          AsyncExecutor(
+              name: name,
+              sequential: false,
+              parallelism: threads,
+              logger: logger,
+              taskTypeRegister: typeSet.toList),
+          UnmodifiableListView(platforms));
+
+  @override
+  Stream<AsserestReport> invoke() {
+    if (_invoked) {
+      throw StateError("This executor has been invoked already.");
+    }
+
+    // Set true immediately to prevent call again in a moment
+    _invoked = true;
+
+    return Stream.fromFutures(_executor.executeAll(_platforms));
   }
+
+  @override
+  bool get isInvoked => _invoked;
+
+  @override
+  Future<bool> shutdown() => _executor.close();
 }
