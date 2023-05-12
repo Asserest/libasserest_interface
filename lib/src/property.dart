@@ -86,9 +86,9 @@ abstract base class PropertyParseProcessor<T extends AsserestProperty> {
   /// This method **is not** designed for inhertance since it defines all
   /// standardized properties in [Map] and convert to all builtin Dart object
   /// to [createProperty].
-  /// 
+  ///
   /// If the property is incompleted, [InvalidPropertyMapException] will be thrown.
-  /// 
+  ///
   /// If the parser does not support url scheme, [StateError] will be thrown.
   @protected
   @mustCallSuper

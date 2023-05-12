@@ -8,7 +8,7 @@ abstract interface class AsserestThrowable {
 
   /// A [String] will be used for describe throwable information
   /// in terminal.
-  /// 
+  ///
   /// The content should be as detail as possible.
   @override
   String toString();

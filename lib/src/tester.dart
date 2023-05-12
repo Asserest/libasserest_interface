@@ -201,7 +201,8 @@ typedef void AsyncExecutorLogger(String type, dynamic message,
     [dynamic error, dynamic stackTrace]);
 
 /// A platform for handling multiple [AsserestTestPlatform] to execute at once.
-final class AsserestParallelTestPlatform extends IterableBase<AsserestTestPlatform> {
+final class AsserestParallelTestPlatform
+    extends IterableBase<AsserestTestPlatform> {
   /// A [Map] with [AsserestProperty.hashCode] as reference.
   final Map<int, AsserestTestPlatform> _platforms = {};
   final _AsserestParallelTestTypeSet _typeSet = _AsserestParallelTestTypeSet();
@@ -298,7 +299,7 @@ final class _AsserestParallelExecutor implements AsserestParallelExecutor {
 }
 
 /// A [List] extension for [AsserestProperty] that building an [AsserestParallelExecutor]
-/// directly. 
+/// directly.
 extension DirectParseParallelExecutor<AP extends AsserestProperty> on List<AP> {
   /// Assign entire items in this [List] to [AsserestParallelExecutor] with bypassing
   /// [AsserestParallelTestPlatform.applyAll].
