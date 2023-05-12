@@ -18,7 +18,7 @@ extension on AsserestResult {
 }
 
 /// Implemented [AsserestReport] object.
-class _AsserestReport implements AsserestReport {
+final class _AsserestReport implements AsserestReport {
   @override
   final Uri url;
 
@@ -54,7 +54,7 @@ class _AsserestReport implements AsserestReport {
 ///
 /// This is [AsyncTask] based class with integrated stopwatch system for marking
 /// execution duration.
-abstract class AsserestTestPlatform<T extends AsserestProperty>
+abstract base class AsserestTestPlatform<T extends AsserestProperty>
     extends AsyncTask<T, AsserestReport> {
   /// [AsserestProperty] for running this test.
   final T property;
@@ -107,8 +107,7 @@ typedef AsserestTestPlatformBuilder = AsserestTestPlatform Function(
     AsserestProperty property);
 
 /// A handler for assigning [AsserestTestPlatform] from [AsserestProperty].
-@sealed
-class AsserestTestAssigner {
+final class AsserestTestAssigner {
   static final AsserestTestAssigner _instance = AsserestTestAssigner._();
 
   final Map<Type, AsserestTestPlatformBuilder> _platformBuilders = {};
@@ -154,7 +153,7 @@ class AsserestTestAssigner {
 
 /// A [Set] which allows [AsyncTask] to identify all provided [AsserestTestPlatform]
 /// subclasses.
-class _AsserestParallelTestTypeSet extends SetBase<AsserestTestPlatform> {
+final class _AsserestParallelTestTypeSet extends SetBase<AsserestTestPlatform> {
   final HashMap<Type, AsserestTestPlatform> _typeMap = HashMap();
 
   @override
@@ -202,8 +201,7 @@ typedef void AsyncExecutorLogger(String type, dynamic message,
     [dynamic error, dynamic stackTrace]);
 
 /// A platform for handling multiple [AsserestTestPlatform] to execute at once.
-@sealed
-class AsserestParallelTestPlatform extends IterableBase<AsserestTestPlatform> {
+final class AsserestParallelTestPlatform extends IterableBase<AsserestTestPlatform> {
   /// A [Map] with [AsserestProperty.hashCode] as reference.
   final Map<int, AsserestTestPlatform> _platforms = {};
   final _AsserestParallelTestTypeSet _typeSet = _AsserestParallelTestTypeSet();
@@ -238,8 +236,7 @@ class AsserestParallelTestPlatform extends IterableBase<AsserestTestPlatform> {
 }
 
 /// An executor for handle assertion on [AsserestProperty].
-@sealed
-abstract class AsserestParallelExecutor {
+sealed class AsserestParallelExecutor {
   const AsserestParallelExecutor._();
 
   /// Determine does [invoke] called already.
@@ -258,7 +255,7 @@ abstract class AsserestParallelExecutor {
   Future<bool> shutdown();
 }
 
-class _AsserestParallelExecutor implements AsserestParallelExecutor {
+final class _AsserestParallelExecutor implements AsserestParallelExecutor {
   final AsyncExecutor _executor;
   final UnmodifiableListView<AsserestTestPlatform> _platforms;
   bool _invoked;

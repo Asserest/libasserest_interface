@@ -14,7 +14,7 @@ import 'tester.dart' show AsserestTestPlatform;
 /// to ensure it can be identified by [runtimeType] when
 /// constructing tester.
 @immutable
-abstract class AsserestProperty {
+abstract interface class AsserestProperty {
   const AsserestProperty._();
 
   /// The testing [url].
@@ -46,7 +46,7 @@ abstract class AsserestProperty {
 /// To avoid this exception thrown, it is recommanded to verify
 /// the related [PropertyParseProcessor] is defined already by
 /// using [AsserestPropertyParser.isDefined].
-class UndefinedSchemeParserException extends AsserestException {
+final class UndefinedSchemeParserException extends AsserestException {
   /// An [Uri.scheme] which does not defined it's [PropertyParseProcessor].
   final String scheme;
 
@@ -64,7 +64,7 @@ class UndefinedSchemeParserException extends AsserestException {
 
 /// A processor for constructing [T] which is corresponded child
 /// class of [AsserestProperty].
-abstract class PropertyParseProcessor<T extends AsserestProperty> {
+abstract base class PropertyParseProcessor<T extends AsserestProperty> {
   /// Property parser, this must be remain nothing and should be able to
   /// construct as constant form.
   const PropertyParseProcessor();
@@ -132,8 +132,7 @@ extension on PropertyParseProcessor {
 }
 
 /// A parser for parsing [Map] data to [AsserestProperty].
-@sealed
-class AsserestPropertyParser {
+final class AsserestPropertyParser {
   /// Instance of this parser.
   static final AsserestPropertyParser _instance = AsserestPropertyParser._();
 
@@ -218,8 +217,7 @@ class AsserestPropertyParser {
 
 /// An [Exception] when given property [Map] does not stastified
 /// the standard.
-@sealed
-class InvalidPropertyMapException extends AsserestException {
+final class InvalidPropertyMapException extends AsserestException {
   final Map<String, dynamic> _propertyMap;
 
   InvalidPropertyMapException._(this._propertyMap);

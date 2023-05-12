@@ -1,3 +1,7 @@
+## 1.0.0-beta.3
+
+* Implementing under Dart 3
+
 ## 1.0.0-beta.2+1
 
 * Rename library

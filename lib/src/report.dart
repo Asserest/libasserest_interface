@@ -14,9 +14,8 @@ enum AsserestResult {
 /// 
 /// This should not be inherted or implemented to prevent
 /// modification of value.
-@sealed
 @immutable
-abstract class AsserestReport {
+abstract interface class AsserestReport {
   const AsserestReport._();
 
   /// Tested URL in [URI] object form.
