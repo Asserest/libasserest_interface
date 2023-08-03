@@ -202,7 +202,7 @@ typedef void AsyncExecutorLogger(String type, dynamic message,
 
 /// A platform for handling multiple [AsserestTestPlatform] to execute at once.
 final class AsserestParallelTestPlatform
-    extends IterableBase<AsserestTestPlatform> {
+    extends Iterable<AsserestTestPlatform> {
   /// A [Map] with [AsserestProperty.hashCode] as reference.
   final Map<int, AsserestTestPlatform> _platforms = {};
   final _AsserestParallelTestTypeSet _typeSet = _AsserestParallelTestTypeSet();
