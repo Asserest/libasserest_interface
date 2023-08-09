@@ -1,3 +1,9 @@
+## 1.0.0
+
+* Denote as first stable version
+* Changes fews `sealed` classes to `abstract final` scope.
+* Fix incorrect condition of `try_count` when inaccessible.
+
 ## 1.0.0-beta.3
 
 * Implementing under Dart 3
