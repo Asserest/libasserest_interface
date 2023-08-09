@@ -177,7 +177,7 @@ final class _AsserestParallelTestTypeSet extends SetBase<AsserestTestPlatform> {
 
   @override
   AsserestTestPlatform<AsserestProperty>? lookup(Object? element) {
-    return _typeMap[element];
+    throw UnsupportedError("Look up cannot be performed in this set.");
   }
 
   @override
@@ -237,7 +237,7 @@ final class AsserestParallelTestPlatform
 }
 
 /// An executor for handle assertion on [AsserestProperty].
-sealed class AsserestParallelExecutor {
+abstract final class AsserestParallelExecutor {
   const AsserestParallelExecutor._();
 
   /// Determine does [invoke] called already.
