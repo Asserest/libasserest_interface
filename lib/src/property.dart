@@ -110,7 +110,7 @@ abstract base class PropertyParseProcessor<T extends AsserestProperty> {
         .any((element) => element.toLowerCase() == url.scheme)) {
       throw StateError(
           "URL scheme '${url.scheme}' is not handled by this processor.");
-    } else if ((tryCount == null) ^ accessible) {
+    } else if ((tryCount != null) && !accessible) {
       throw InvalidPropertyMapException._(propertyMap);
     }
 
