@@ -64,6 +64,7 @@ final class UndefinedSchemeParserException extends AsserestException {
 
 /// A processor for constructing [T] which is corresponded child
 /// class of [AsserestProperty].
+@immutable
 abstract base class PropertyParseProcessor<T extends AsserestProperty> {
   /// Property parser, this must be remain nothing and should be able to
   /// construct as constant form.

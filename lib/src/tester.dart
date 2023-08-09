@@ -220,7 +220,7 @@ final class AsserestParallelTestPlatform
   void apply(AsserestProperty property) {
     AsserestTestPlatform platform =
         AsserestTestAssigner().buildTestPlatform(property);
-    _platforms[property.hashCode] = platform;
+    _platforms[(property.hashCode << 2) ^ (property.runtimeType.hashCode >>> 2)] = platform;
     _typeSet.add(platform);
   }
 
