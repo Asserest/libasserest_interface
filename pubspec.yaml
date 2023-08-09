@@ -8,5 +8,3 @@ dependencies:
   async_task: ^1.0.20
   yaml: ^3.1.2
   meta: ^1.9.1
-dev_dependencies:
-  test: ^1.24.2
