@@ -67,10 +67,10 @@ There are two methods or getters to be overriden: `createProperty` for parsing m
 ```dart
 final class CustomPropertyParseProcessor
     extends PropertyParseProcessor<CustomProperty> {
-  const CustomParseProcessor();
+  const CustomPropertyParseProcessor();
 
   @override
-  AsserestHttpProperty createProperty(
+  CustomProperty createProperty(
       Uri url,
       Duration timeout,
       bool accessible,
@@ -88,7 +88,7 @@ final class CustomPropertyParseProcessor
 
 Then, when the parser is ready to uses, you can work on implementing test form by extending `AsserestTestPlatform`.
 
-It only required to override `runTestProcess`, a method corresponded to perform testing and generate assertion result of given URL.
+It mainly override `runTestProcess`, a method corresponded to perform testing and generate assertion result of given URL.
 
 ```dart
 final class CustomTestPlatform extends AsserestTestPlatform<CustomProperty> {

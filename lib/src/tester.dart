@@ -72,6 +72,9 @@ abstract base class AsserestTestPlatform<T extends AsserestProperty>
   @protected
   Future<AsserestResult> runTestProcess();
 
+  @override
+  T parameters() => property;
+
   /// The entire assertion task will be processed once [run] has been
   /// invoked.
   ///
